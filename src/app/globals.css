@@ -116,6 +116,18 @@ h1 {
   font-size: 15px;
 }
 
+.date small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.secondaryDate {
+  color: var(--brass) !important;
+  font-size: 10px !important;
+}
+
+
 .tabs {
   display: flex;
   gap: 8px;
@@ -711,9 +723,21 @@ h1 {
   position: absolute;
   right: 28px;
   bottom: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.65);
+}
+
+.resultDate strong {
+  color: rgba(255, 255, 255, 0.8);
   font-size: 12px;
+}
+
+.resultDate span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
 }
 
 .resultSection {
@@ -1041,8 +1065,9 @@ h1 {
   }
 
   .resultDate {
-    position: static;
-    margin-top: 22px;
+  position: static;
+  align-items: flex-start;
+  margin-top: 22px;
   }
 
   .resultMetrics {
