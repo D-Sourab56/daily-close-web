@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hisaab Sathi
 
-## Getting Started
+Hisaab Sathi is a simple daily-closing web application designed for small merchants in Nepal.
 
-First, run the development server:
+## Live website
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+https://hisaab-sathi-nepal.vercel.app/
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Current version
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**V1.1**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Features
 
-## Learn More
+- Simple daily shop-closing form
+- Opening cash and current drawer cash
+- Enter drawer cash as a total amount
+- Count drawer cash using Nepali currency denominations
+- QR/e-wallet and online banking entries
+- Cash and other expense entries
+- Other non-sales money entries
+- Automatic sales and expense calculations
+- Select cash kept for the next business day
+- Calculate owner withdrawal
+- Save closing history locally
+- View previous closing details
+- Edit previous closing records
+- Download closing records as PDF
+- Bikram Sambat (BS) and English (AD) dates
+- Light and dark modes
+- High-contrast money input fields
+- Nepali and English labels
+- Responsive design for phones and computers
 
-To learn more about Next.js, take a look at the following resources:
+## How data is stored
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Hisaab Sathi V1.1 has:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- No account
+- No login
+- No backend
+- No cloud database
+- No payment integration
 
-## Deploy on Vercel
+All closing records are stored inside the merchant's browser using `localStorage`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Each browser and device has separate records. Clearing browser data, changing browsers, or changing devices may remove or hide saved records.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Merchants should download important closing records as PDF for safekeeping.
+
+## How calculations work
+
+### Cash sales
+
+```text
+Cash Sales =
+Cash in Drawer Now
+- Opening Cash
+- Other Money In
++ Cash Expenses
