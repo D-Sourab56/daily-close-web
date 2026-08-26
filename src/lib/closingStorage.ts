@@ -3,6 +3,10 @@ import type {
   ClosingResult,
 } from "@/lib/calculateClosing";
 
+import type {
+  CashCountDetails,
+} from "@/lib/cashCounter";
+
 const STORAGE_KEY = "daily-close-v0-closings";
 
 export type CashHandoff = {
@@ -18,6 +22,7 @@ export type SavedClosing = {
   amounts: ClosingAmounts;
   result: ClosingResult;
   cashHandoff: CashHandoff;
+  cashCount: CashCountDetails;
 };
 
 export type SaveClosingResponse = {
@@ -27,11 +32,15 @@ export type SaveClosingResponse = {
 
 export function getLocalDateKey(date = new Date()) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(date.getDate()).padStart(
     2,
     "0",
   );
-  const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -50,7 +59,8 @@ export function loadClosings(): SavedClosing[] {
       return [];
     }
 
-    const parsedValue: unknown = JSON.parse(storedValue);
+    const parsedValue: unknown =
+      JSON.parse(storedValue);
 
     if (!Array.isArray(parsedValue)) {
       return [];
@@ -68,15 +78,29 @@ export function loadClosings(): SavedClosing[] {
           closing.result.closingCash -
             cashKeptForTomorrow;
 
+        const cashCount: CashCountDetails = {
+          mode:
+            closing.cashCount?.mode ===
+            "denominations"
+              ? "denominations"
+              : "total",
+
+          counts: closing.cashCount?.counts ?? {},
+        };
+
         return {
           ...closing,
+
           updatedAt:
-            closing.updatedAt ?? closing.createdAt,
+            closing.updatedAt ??
+            closing.createdAt,
 
           cashHandoff: {
             cashKeptForTomorrow,
             ownerWithdrawal,
           },
+
+          cashCount,
         };
       })
       .sort((first, second) =>
@@ -92,6 +116,7 @@ export function saveClosing(
   result: ClosingResult,
   cashHandoff: CashHandoff,
   closingToUpdate?: SavedClosing,
+  cashCount?: CashCountDetails,
 ): SaveClosingResponse {
   const currentClosings = loadClosings();
   const today = getLocalDateKey();
@@ -116,12 +141,21 @@ export function saveClosing(
     amounts,
     result,
     cashHandoff,
+
+    cashCount:
+      cashCount ??
+      existingClosing?.cashCount ?? {
+        mode: "total",
+        counts: {},
+      },
   };
 
   const closings = [
     savedClosing,
+
     ...currentClosings.filter(
-      (closing) => closing.id !== savedClosing.id,
+      (closing) =>
+        closing.id !== savedClosing.id,
     ),
   ].sort((first, second) =>
     second.date.localeCompare(first.date),

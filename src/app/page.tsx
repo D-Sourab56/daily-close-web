@@ -23,6 +23,18 @@ import {
 } from "@/lib/calculateClosing";
 
 import {
+  calculateCashCount,
+  cashDenominations,
+  createEmptyCashCounts,
+  isValidCashQuantity,
+  toCashCountValues,
+  toStoredCashCounts,
+  type CashCountValues,
+  type CashEntryMode,
+  type StoredCashCounts,
+} from "@/lib/cashCounter";
+
+import {
   getLocalDateKey,
   loadClosings,
   saveClosing,
@@ -38,6 +50,13 @@ type DetailRow = {
   labelNe: string;
   amount: number;
   tone: "incoming" | "outgoing" | "neutral";
+};
+
+type CashBreakdownRow = {
+  key: string;
+  label: string;
+  quantity: number;
+  subtotal: number;
 };
 
 const initialValues: FormValues = {
@@ -82,21 +101,27 @@ function closingToFormValues(
     openingCash: amountToInputValue(
       closing.amounts.openingCash,
     ),
+
     cashNow: amountToInputValue(
       closing.amounts.cashNow,
     ),
+
     qrWalletReceived: amountToInputValue(
       closing.amounts.qrWalletReceived,
     ),
+
     onlineBankingReceived: amountToInputValue(
       closing.amounts.onlineBankingReceived,
     ),
+
     cashExpenses: amountToInputValue(
       closing.amounts.cashExpenses,
     ),
+
     otherExpenses: amountToInputValue(
       closing.amounts.otherExpenses,
     ),
+
     otherMoneyIn: amountToInputValue(
       closing.amounts.otherMoneyIn,
     ),
@@ -114,7 +139,10 @@ function getDetailRows(
     },
     {
       ...appCopy.result.remainingAfterExpenses,
-      amount: closing.result.remainingAfterExpenses,
+
+      amount:
+        closing.result.remainingAfterExpenses,
+
       tone:
         closing.result.remainingAfterExpenses >= 0
           ? "incoming"
@@ -152,16 +180,45 @@ function getDetailRows(
     },
     {
       ...appCopy.result.cashKeptForTomorrow,
+
       amount:
         closing.cashHandoff.cashKeptForTomorrow,
+
       tone: "neutral",
     },
     {
       ...appCopy.result.ownerWithdrawal,
-      amount: closing.cashHandoff.ownerWithdrawal,
+
+      amount:
+        closing.cashHandoff.ownerWithdrawal,
+
       tone: "neutral",
     },
   ];
+}
+
+function getCashBreakdownRows(
+  counts: StoredCashCounts,
+): CashBreakdownRow[] {
+  const rows: CashBreakdownRow[] = [];
+
+  cashDenominations.forEach((denomination) => {
+    const quantity =
+      counts[denomination.key] ?? 0;
+
+    if (quantity > 0) {
+      rows.push({
+        key: denomination.key,
+        label: denomination.label,
+        quantity,
+
+        subtotal:
+          denomination.value * quantity,
+      });
+    }
+  });
+
+  return rows;
 }
 
 function openPdfPrintDialog(closing: SavedClosing) {
@@ -184,11 +241,64 @@ function openPdfPrintDialog(closing: SavedClosing) {
             <strong>${row.labelEn}</strong>
             <small>${row.labelNe}</small>
           </td>
+
           <td>रु ${formatMoney(row.amount)}</td>
         </tr>
       `,
     )
     .join("");
+
+  const cashBreakdownRows =
+    getCashBreakdownRows(
+      closing.cashCount.counts,
+    );
+
+  const cashMethodText =
+    closing.cashCount.mode === "denominations"
+      ? `${appCopy.cashCounter.countedByDenominationEn} /
+         ${appCopy.cashCounter.countedByDenominationNe}`
+      : `${appCopy.cashCounter.enteredAsTotalEn} /
+         ${appCopy.cashCounter.enteredAsTotalNe}`;
+
+  const cashBreakdownHtml =
+    closing.cashCount.mode === "denominations"
+      ? `
+        <h2>
+          ${appCopy.cashCounter.breakdownEn} /
+          ${appCopy.cashCounter.breakdownNe}
+        </h2>
+
+        <p class="method">${cashMethodText}</p>
+
+        <table>
+          <tbody>
+            ${cashBreakdownRows
+              .map(
+                (row) => `
+                  <tr>
+                    <td>
+                      रु ${row.label}
+                      × ${row.quantity}
+                    </td>
+
+                    <td>
+                      रु ${formatMoney(row.subtotal)}
+                    </td>
+                  </tr>
+                `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      `
+      : `
+        <h2>
+          ${appCopy.cashCounter.breakdownEn} /
+          ${appCopy.cashCounter.breakdownNe}
+        </h2>
+
+        <p class="method">${cashMethodText}</p>
+      `;
 
   printWindow.document.open();
 
@@ -199,7 +309,7 @@ function openPdfPrintDialog(closing: SavedClosing) {
         <meta charset="UTF-8" />
 
         <title>
-          Daily Close - ${formatSavedDate(
+          Hisaab Sathi - ${formatSavedDate(
             closing.date,
           )}
         </title>
@@ -240,7 +350,13 @@ function openPdfPrintDialog(closing: SavedClosing) {
             font-size: 30px;
           }
 
-          .date {
+          h2 {
+            margin-top: 28px;
+            font-size: 18px;
+          }
+
+          .date,
+          .method {
             color: #69736f;
           }
 
@@ -299,8 +415,11 @@ function openPdfPrintDialog(closing: SavedClosing) {
 
       <body>
         <header>
-          <p class="brand">DAILY CLOSE</p>
-          <h1>Closing Record / दैनिक हिसाब</h1>
+          <p class="brand">HISAAB SATHI</p>
+
+          <h1>
+            Closing Record / दैनिक हिसाब
+          </h1>
 
           <p class="date">
             ${formatSavedDate(closing.date)}
@@ -320,11 +439,15 @@ function openPdfPrintDialog(closing: SavedClosing) {
           </strong>
         </section>
 
-        <h2>Complete details / पूर्ण विवरण</h2>
+        <h2>
+          Complete details / पूर्ण विवरण
+        </h2>
 
         <table>
           <tbody>${detailHtml}</tbody>
         </table>
+
+        ${cashBreakdownHtml}
 
         <footer>
           Remaining after recorded expenses is not
@@ -349,6 +472,14 @@ export default function Home() {
   const [values, setValues] =
     useState<FormValues>(initialValues);
 
+  const [cashEntryMode, setCashEntryMode] =
+    useState<CashEntryMode>("total");
+
+  const [cashCounts, setCashCounts] =
+    useState<CashCountValues>(
+      createEmptyCashCounts,
+    );
+
   const [submittedAmounts, setSubmittedAmounts] =
     useState<ClosingAmounts | null>(null);
 
@@ -365,57 +496,83 @@ export default function Home() {
   const [lastSavedClosing, setLastSavedClosing] =
     useState<SavedClosing | null>(null);
 
-  const [cashToKeep, setCashToKeep] = useState("");
+  const [cashToKeep, setCashToKeep] =
+    useState("");
 
   const [openingAutoFilled, setOpeningAutoFilled] =
     useState(false);
 
-  const [handoffError, setHandoffError] = useState("");
+  const [handoffError, setHandoffError] =
+    useState("");
+
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      const storedClosings = loadClosings();
-      const todayKey = getLocalDateKey();
+    const frameId =
+      window.requestAnimationFrame(() => {
+        const storedClosings = loadClosings();
+        const todayKey = getLocalDateKey();
 
-      setHistory(storedClosings);
+        setHistory(storedClosings);
 
-      const latestPreviousClosing =
-        storedClosings.find(
-          (closing) => closing.date < todayKey,
-        );
+        const latestPreviousClosing =
+          storedClosings.find(
+            (closing) =>
+              closing.date < todayKey,
+          );
 
-      if (latestPreviousClosing) {
-        setValues((current) => ({
-          ...current,
+        if (latestPreviousClosing) {
+          setValues((current) => ({
+            ...current,
 
-          openingCash: amountToInputValue(
-            latestPreviousClosing.cashHandoff
-              .cashKeptForTomorrow,
-          ),
-        }));
+            openingCash: amountToInputValue(
+              latestPreviousClosing.cashHandoff
+                .cashKeptForTomorrow,
+            ),
+          }));
 
-        setOpeningAutoFilled(true);
-      }
-    });
+          setOpeningAutoFilled(true);
+        }
+      });
 
     return () => {
       window.cancelAnimationFrame(frameId);
     };
   }, []);
 
-  const today = new Intl.DateTimeFormat("en-NP", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date());
+  const today = new Intl.DateTimeFormat(
+    "en-NP",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    },
+  ).format(new Date());
 
-  const cashToKeepAmount = Number(cashToKeep || 0);
+  const countedCashTotal =
+    calculateCashCount(cashCounts);
+
+  const storedCurrentCashCounts =
+    toStoredCashCounts(cashCounts);
+
+  const currentCashBreakdownRows =
+    getCashBreakdownRows(
+      storedCurrentCashCounts,
+    );
+
+  const cashToKeepAmount =
+    Number(cashToKeep || 0);
 
   const ownerWithdrawal = result
     ? result.closingCash - cashToKeepAmount
     : 0;
+
+  function markFormChanged() {
+    setSaved(false);
+    setLastSavedClosing(null);
+    setError("");
+  }
 
   function updateValue(
     field: ClosingFieldKey,
@@ -434,9 +591,51 @@ export default function Home() {
       setOpeningAutoFilled(false);
     }
 
-    setSaved(false);
-    setLastSavedClosing(null);
-    setError("");
+    markFormChanged();
+  }
+
+  function updateCashQuantity(
+    key: keyof CashCountValues,
+    value: string,
+  ) {
+    if (!isValidCashQuantity(value)) {
+      return;
+    }
+
+    setCashCounts((current) => ({
+      ...current,
+      [key]: value,
+    }));
+
+    markFormChanged();
+  }
+
+  function changeCashEntryMode(
+    mode: CashEntryMode,
+  ) {
+    if (mode === cashEntryMode) {
+      return;
+    }
+
+    if (
+      mode === "total" &&
+      cashEntryMode === "denominations"
+    ) {
+      setValues((current) => ({
+        ...current,
+
+        cashNow:
+          amountToInputValue(countedCashTotal),
+      }));
+    }
+
+    setCashEntryMode(mode);
+    markFormChanged();
+  }
+
+  function clearCashCount() {
+    setCashCounts(createEmptyCashCounts());
+    markFormChanged();
   }
 
   function updateCashToKeep(value: string) {
@@ -467,7 +666,10 @@ export default function Home() {
             value={values[field.key]}
             placeholder={field.placeholder}
             onChange={(event) =>
-              updateValue(field.key, event.target.value)
+              updateValue(
+                field.key,
+                event.target.value,
+              )
             }
           />
         </div>
@@ -475,12 +677,22 @@ export default function Home() {
     );
   }
 
-  function submitClosing(event: FormEvent<HTMLFormElement>) {
+  function submitClosing(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
+    const drawerCash =
+      cashEntryMode === "denominations"
+        ? countedCashTotal
+        : Number(values.cashNow || 0);
+
     const amounts: ClosingAmounts = {
-      openingCash: Number(values.openingCash || 0),
-      cashNow: Number(values.cashNow || 0),
+      openingCash: Number(
+        values.openingCash || 0,
+      ),
+
+      cashNow: drawerCash,
 
       qrWalletReceived: Number(
         values.qrWalletReceived || 0,
@@ -490,15 +702,26 @@ export default function Home() {
         values.onlineBankingReceived || 0,
       ),
 
-      cashExpenses: Number(values.cashExpenses || 0),
-      otherExpenses: Number(values.otherExpenses || 0),
-      otherMoneyIn: Number(values.otherMoneyIn || 0),
+      cashExpenses: Number(
+        values.cashExpenses || 0,
+      ),
+
+      otherExpenses: Number(
+        values.otherExpenses || 0,
+      ),
+
+      otherMoneyIn: Number(
+        values.otherMoneyIn || 0,
+      ),
     };
 
     const outcome = calculateClosing(amounts);
 
     if (!outcome.ok) {
-      setError(appCopy.validation[outcome.error]);
+      setError(
+        appCopy.validation[outcome.error],
+      );
+
       return;
     }
 
@@ -525,7 +748,7 @@ export default function Home() {
     });
   }
 
-  function saveCurrentClosing() {
+    function saveCurrentClosing() {
     if (!submittedAmounts || !result) {
       return;
     }
@@ -537,13 +760,18 @@ export default function Home() {
       setHandoffError(
         appCopy.validation.invalidTomorrowCash,
       );
+
       return;
     }
 
-    if (cashToKeepAmount > result.closingCash) {
+    if (
+      cashToKeepAmount >
+      result.closingCash
+    ) {
       setHandoffError(
         appCopy.validation.tomorrowCashTooHigh,
       );
+
       return;
     }
 
@@ -557,10 +785,67 @@ export default function Home() {
       result,
       cashHandoff,
       editingClosing ?? undefined,
+      {
+        mode: cashEntryMode,
+        counts: storedCurrentCashCounts,
+      },
     );
 
     setHistory(response.closings);
-    setLastSavedClosing(response.savedClosing);
+
+    if (editingClosing) {
+      const todayKey = getLocalDateKey();
+
+      const latestPreviousClosing =
+        response.closings.find(
+          (closing) =>
+            closing.date < todayKey,
+        );
+
+      setValues({
+        ...initialValues,
+
+        openingCash: latestPreviousClosing
+          ? amountToInputValue(
+              latestPreviousClosing
+                .cashHandoff
+                .cashKeptForTomorrow,
+            )
+          : "",
+      });
+
+      setCashEntryMode("total");
+      setCashCounts(
+        createEmptyCashCounts(),
+      );
+
+      setEditingClosing(null);
+      setSubmittedAmounts(null);
+      setResult(null);
+      setCashToKeep("");
+      setLastSavedClosing(null);
+      setSaved(false);
+      setHandoffError("");
+      setError("");
+
+      setOpeningAutoFilled(
+        Boolean(latestPreviousClosing),
+      );
+
+      setActiveTab("history");
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      return;
+    }
+
+    setLastSavedClosing(
+      response.savedClosing,
+    );
+
     setSaved(true);
   }
 
@@ -578,12 +863,27 @@ export default function Home() {
     });
   }
 
-  function editSavedClosing(closing: SavedClosing) {
-    setValues(closingToFormValues(closing));
+  function editSavedClosing(
+    closing: SavedClosing,
+  ) {
+    setValues(
+      closingToFormValues(closing),
+    );
+
+    setCashEntryMode(
+      closing.cashCount.mode,
+    );
+
+    setCashCounts(
+      toCashCountValues(
+        closing.cashCount.counts,
+      ),
+    );
 
     setCashToKeep(
       amountToInputValue(
-        closing.cashHandoff.cashKeptForTomorrow,
+        closing.cashHandoff
+          .cashKeptForTomorrow,
       ),
     );
 
@@ -621,9 +921,15 @@ export default function Home() {
     <main className="app">
       <header className="header">
         <div>
-          <p className="eyebrow">{appCopy.brand}</p>
+          <p className="eyebrow">
+            {appCopy.brand}
+          </p>
+
           <h1>{headerTitle}</h1>
-          <p className="subtitle">{headerSubtitle}</p>
+
+          <p className="subtitle">
+            {headerSubtitle}
+          </p>
         </div>
 
         <div className="date">
@@ -640,7 +946,9 @@ export default function Home() {
               : "tab"
           }
           type="button"
-          onClick={() => setActiveTab("today")}
+          onClick={() =>
+            setActiveTab("today")
+          }
         >
           {appCopy.navigation.today}
         </button>
@@ -652,7 +960,9 @@ export default function Home() {
               : "tab"
           }
           type="button"
-          onClick={() => setActiveTab("history")}
+          onClick={() =>
+            setActiveTab("history")
+          }
         >
           {appCopy.navigation.history}
         </button>
@@ -662,8 +972,13 @@ export default function Home() {
         <section className="card">
           <div className="cardHeading">
             <div>
-              <h2>{appCopy.history.heading}</h2>
-              <p>{appCopy.history.description}</p>
+              <h2>
+                {appCopy.history.heading}
+              </h2>
+
+              <p>
+                {appCopy.history.description}
+              </p>
             </div>
 
             <span className="step">
@@ -681,107 +996,221 @@ export default function Home() {
             </div>
           ) : (
             <div className="optionalSections">
-              {history.map((closing) => (
-                <details
-                  className="optionalSection"
-                  key={closing.id}
-                >
-                  <summary className="optionalSummary">
-                    <div>
-                      <strong>
-                        {formatSavedDate(closing.date)}
-                      </strong>
+              {history.map((closing) => {
+                const historyCashRows =
+                  getCashBreakdownRows(
+                    closing.cashCount.counts,
+                  );
 
-                      <small>
-                        {appCopy.history.sales}: रु{" "}
-                        {formatMoney(
-                          closing.result.salesReceived,
-                        )}
-                        {" · "}
-                        {appCopy.history.expenses}: रु{" "}
-                        {formatMoney(
-                          closing.result.totalExpenses,
-                        )}
-                      </small>
-                    </div>
+                return (
+                  <details
+                    className="optionalSection"
+                    key={closing.id}
+                  >
+                    <summary className="optionalSummary">
+                      <div>
+                        <strong>
+                          {formatSavedDate(
+                            closing.date,
+                          )}
+                        </strong>
 
-                    <span className="optionalBadge">
-                      {appCopy.history.viewDetails}
-                    </span>
-                  </summary>
+                        <small>
+                          {appCopy.history.sales}: रु{" "}
+                          {formatMoney(
+                            closing.result
+                              .salesReceived,
+                          )}
+                          {" · "}
+                          {
+                            appCopy.history
+                              .expenses
+                          }
+                          : रु{" "}
+                          {formatMoney(
+                            closing.result
+                              .totalExpenses,
+                          )}
+                        </small>
+                      </div>
 
-                  <div className="optionalBody">
-                    <div className="resultList">
-                      {getDetailRows(closing).map(
-                        (row) => (
+                      <span className="optionalBadge">
+                        {
+                          appCopy.history
+                            .viewDetails
+                        }
+                      </span>
+                    </summary>
+
+                    <div className="optionalBody">
+                      <div className="resultList">
+                        {getDetailRows(
+                          closing,
+                        ).map((row) => (
                           <div
                             className="resultRow"
                             key={row.labelEn}
                           >
                             <div>
-                              <strong>{row.labelEn}</strong>
-                              <small>{row.labelNe}</small>
+                              <strong>
+                                {row.labelEn}
+                              </strong>
+
+                              <small>
+                                {row.labelNe}
+                              </small>
                             </div>
 
                             <span
                               className={
-                                row.tone === "incoming"
+                                row.tone ===
+                                "incoming"
                                   ? "incomingAmount"
-                                  : row.tone === "outgoing"
+                                  : row.tone ===
+                                      "outgoing"
                                     ? "outgoingAmount"
                                     : undefined
                               }
                             >
-                              रु {formatMoney(row.amount)}
+                              रु{" "}
+                              {formatMoney(
+                                row.amount,
+                              )}
                             </span>
                           </div>
-                        ),
-                      )}
+                        ))}
+                      </div>
+
+                      <div className="cashCountRecord">
+                        <div className="cashCountRecordHeading">
+                          <div>
+                            <strong>
+                              {
+                                appCopy.cashCounter
+                                  .breakdownEn
+                              }
+                            </strong>
+
+                            <small>
+                              {
+                                appCopy.cashCounter
+                                  .breakdownNe
+                              }
+                            </small>
+                          </div>
+
+                          <span>
+                            {closing.cashCount
+                              .mode ===
+                            "denominations"
+                              ? appCopy
+                                  .cashCounter
+                                  .countedByDenominationEn
+                              : appCopy
+                                  .cashCounter
+                                  .enteredAsTotalEn}
+                          </span>
+                        </div>
+
+                        {closing.cashCount
+                          .mode ===
+                          "denominations" &&
+                          historyCashRows.length >
+                            0 && (
+                            <div className="savedCashBreakdown">
+                              {historyCashRows.map(
+                                (row) => (
+                                  <div
+                                    key={row.key}
+                                  >
+                                    <span>
+                                      रु{" "}
+                                      {row.label} ×{" "}
+                                      {
+                                        row.quantity
+                                      }
+                                    </span>
+
+                                    <strong>
+                                      रु{" "}
+                                      {formatMoney(
+                                        row.subtotal,
+                                      )}
+                                    </strong>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+                      </div>
+
+                      <div className="optionalSections">
+                        <button
+                          className="primaryButton"
+                          type="button"
+                          onClick={() =>
+                            openPdfPrintDialog(
+                              closing,
+                            )
+                          }
+                        >
+                          {
+                            appCopy.actions
+                              .pdfNe
+                          }
+
+                          <span>
+                            {
+                              appCopy.actions
+                                .pdfEn
+                            }{" "}
+                            ↓
+                          </span>
+                        </button>
+
+                        <button
+                          className="secondaryButton"
+                          type="button"
+                          onClick={() =>
+                            editSavedClosing(
+                              closing,
+                            )
+                          }
+                        >
+                          <span>
+                            ←{" "}
+                            {
+                              appCopy.actions
+                                .editSavedEn
+                            }
+                          </span>
+
+                          <strong>
+                            {
+                              appCopy.actions
+                                .editSavedNe
+                            }
+                          </strong>
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="optionalSections">
-                      <button
-                        className="primaryButton"
-                        type="button"
-                        onClick={() =>
-                          openPdfPrintDialog(closing)
-                        }
-                      >
-                        {appCopy.actions.pdfNe}
-                        <span>
-                          {appCopy.actions.pdfEn} ↓
-                        </span>
-                      </button>
-
-                      <button
-                        className="secondaryButton"
-                        type="button"
-                        onClick={() =>
-                          editSavedClosing(closing)
-                        }
-                      >
-                        <span>
-                          ← {appCopy.actions.editSavedEn}
-                        </span>
-
-                        <strong>
-                          {appCopy.actions.editSavedNe}
-                        </strong>
-                      </button>
-                    </div>
-                  </div>
-                </details>
-              ))}
+                  </details>
+                );
+              })}
             </div>
           )}
         </section>
       ) : !result ? (
-        <form className="card" onSubmit={submitClosing}>
+        <form
+          className="card"
+          onSubmit={submitClosing}
+        >
           <div className="cardHeading">
             <div>
               <h2>
                 {editingClosing
-                  ? appCopy.history.editHeading
+                  ? appCopy.history
+                      .editHeading
                   : appCopy.today.heading}
               </h2>
 
@@ -790,9 +1219,11 @@ export default function Home() {
                   ? `${formatSavedDate(
                       editingClosing.date,
                     )} · ${
-                      appCopy.history.editDescription
+                      appCopy.history
+                        .editDescription
                     }`
-                  : appCopy.today.description}
+                  : appCopy.today
+                      .description}
               </p>
             </div>
 
@@ -801,41 +1232,342 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="formGrid">
-            {mainClosingFields.map(renderField)}
+          <div className="singleFieldGrid">
+            {renderField(
+              mainClosingFields[0],
+            )}
           </div>
 
           {openingAutoFilled && (
             <p className="privacy">
-              ✓ {appCopy.today.autoOpeningEn}
+              ✓{" "}
+              {
+                appCopy.today
+                  .autoOpeningEn
+              }
 
               <span>
-                {appCopy.today.autoOpeningNe}
+                {
+                  appCopy.today
+                    .autoOpeningNe
+                }
               </span>
             </p>
           )}
+
+          <section className="cashEntryCard">
+            <div className="cashEntryHeading">
+              <div>
+                <h3>
+                  {
+                    appCopy.cashCounter
+                      .titleEn
+                  }
+                </h3>
+
+                <p>
+                  {
+                    appCopy.cashCounter
+                      .titleNe
+                  }
+                </p>
+              </div>
+
+              <span className="requiredBadge">
+                Required / आवश्यक
+              </span>
+            </div>
+
+            <div className="cashMethodQuestion">
+              <strong>
+                {
+                  appCopy.cashCounter
+                    .methodEn
+                }
+              </strong>
+
+              <small>
+                {
+                  appCopy.cashCounter
+                    .methodNe
+                }
+              </small>
+            </div>
+
+            <div
+              className="cashModeSwitch"
+              role="group"
+              aria-label={
+                appCopy.cashCounter.methodEn
+              }
+            >
+              <button
+                className={
+                  cashEntryMode === "total"
+                    ? "cashModeButton active"
+                    : "cashModeButton"
+                }
+                type="button"
+                aria-pressed={
+                  cashEntryMode === "total"
+                }
+                onClick={() =>
+                  changeCashEntryMode(
+                    "total",
+                  )
+                }
+              >
+                <strong>
+                  {
+                    appCopy.cashCounter
+                      .totalModeEn
+                  }
+                </strong>
+
+                <small>
+                  {
+                    appCopy.cashCounter
+                      .totalModeNe
+                  }
+                </small>
+              </button>
+
+              <button
+                className={
+                  cashEntryMode ===
+                  "denominations"
+                    ? "cashModeButton active"
+                    : "cashModeButton"
+                }
+                type="button"
+                aria-pressed={
+                  cashEntryMode ===
+                  "denominations"
+                }
+                onClick={() =>
+                  changeCashEntryMode(
+                    "denominations",
+                  )
+                }
+              >
+                <strong>
+                  {
+                    appCopy.cashCounter
+                      .countModeEn
+                  }
+                </strong>
+
+                <small>
+                  {
+                    appCopy.cashCounter
+                      .countModeNe
+                  }
+                </small>
+              </button>
+            </div>
+
+            {cashEntryMode === "total" ? (
+              <div className="cashTotalEntry">
+                <p className="cashModeHelp">
+                  {
+                    appCopy.cashCounter
+                      .enteredAsTotalNe
+                  }
+                  {" · "}
+                  {
+                    appCopy.cashCounter
+                      .enteredAsTotalEn
+                  }
+                </p>
+
+                <div className="moneyInput">
+                  <span>रु</span>
+
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    name="cashNow"
+                    aria-label={`${appCopy.cashCounter.titleEn} ${appCopy.cashCounter.titleNe}`}
+                    value={values.cashNow}
+                    placeholder="0"
+                    onChange={(event) =>
+                      updateValue(
+                        "cashNow",
+                        event.target.value,
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="cashCounterBody">
+                <p className="cashModeHelp">
+                  {
+                    appCopy.cashCounter
+                      .countHelpNe
+                  }
+                  {" · "}
+                  {
+                    appCopy.cashCounter
+                      .countHelpEn
+                  }
+                </p>
+
+                <div className="denominationGrid">
+                  {cashDenominations.map(
+                    (denomination) => {
+                      const quantity =
+                        Number(
+                          cashCounts[
+                            denomination.key
+                          ] || 0,
+                        );
+
+                      const subtotal =
+                        denomination.value *
+                        quantity;
+
+                      return (
+                        <label
+                          className="denominationItem"
+                          key={
+                            denomination.key
+                          }
+                        >
+                          <span className="denominationValue">
+                            रु{" "}
+                            {
+                              denomination.label
+                            }
+                          </span>
+
+                          <span className="multiplySign">
+                            ×
+                          </span>
+
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            pattern="[0-9]*"
+                            aria-label={`रु ${denomination.label} quantity`}
+                            value={
+                              cashCounts[
+                                denomination.key
+                              ]
+                            }
+                            placeholder="0"
+                            onChange={(
+                              event,
+                            ) =>
+                              updateCashQuantity(
+                                denomination.key,
+                                event.target
+                                  .value,
+                              )
+                            }
+                          />
+
+                          <small>
+                            = रु{" "}
+                            {formatMoney(
+                              subtotal,
+                            )}
+                          </small>
+                        </label>
+                      );
+                    },
+                  )}
+                </div>
+
+                <div className="countedCashTotal">
+                  <div>
+                    <span>
+                      {
+                        appCopy.cashCounter
+                          .countedTotalEn
+                      }
+                    </span>
+
+                    <small>
+                      {
+                        appCopy.cashCounter
+                          .countedTotalNe
+                      }
+                    </small>
+                  </div>
+
+                  <strong>
+                    रु{" "}
+                    {formatMoney(
+                      countedCashTotal,
+                    )}
+                  </strong>
+                </div>
+
+                <button
+                  className="clearCountButton"
+                  type="button"
+                  onClick={clearCashCount}
+                  disabled={
+                    countedCashTotal === 0
+                  }
+                >
+                  {
+                    appCopy.cashCounter
+                      .clearNe
+                  }
+                  <span>
+                    {
+                      appCopy.cashCounter
+                        .clearEn
+                    }
+                  </span>
+                </button>
+              </div>
+            )}
+          </section>
 
           <div className="optionalSections">
             <details className="optionalSection">
               <summary className="optionalSummary">
                 <div>
                   <strong>
-                    {appCopy.sections.eCash.titleEn}
+                    {
+                      appCopy.sections
+                        .eCash.titleEn
+                    }
                   </strong>
 
                   <small>
-                    {appCopy.sections.eCash.titleNe}
+                    {
+                      appCopy.sections
+                        .eCash.titleNe
+                    }
                   </small>
                 </div>
 
                 <span className="optionalBadge">
-                  {appCopy.sections.optional}
+                  {
+                    appCopy.sections
+                      .optional
+                  }
                 </span>
               </summary>
 
               <div className="optionalBody">
+                <p className="optionalDescription">
+                  {
+                    appCopy.sections
+                      .eCash.description
+                  }
+                </p>
+
                 <div className="formGrid">
-                  {eCashFields.map(renderField)}
+                  {eCashFields.map(
+                    renderField,
+                  )}
                 </div>
               </div>
             </details>
@@ -844,22 +1576,40 @@ export default function Home() {
               <summary className="optionalSummary">
                 <div>
                   <strong>
-                    {appCopy.sections.expenses.titleEn}
+                    {
+                      appCopy.sections
+                        .expenses.titleEn
+                    }
                   </strong>
 
                   <small>
-                    {appCopy.sections.expenses.titleNe}
+                    {
+                      appCopy.sections
+                        .expenses.titleNe
+                    }
                   </small>
                 </div>
 
                 <span className="optionalBadge">
-                  {appCopy.sections.optional}
+                  {
+                    appCopy.sections
+                      .optional
+                  }
                 </span>
               </summary>
 
               <div className="optionalBody">
+                <p className="optionalDescription">
+                  {
+                    appCopy.sections
+                      .expenses.description
+                  }
+                </p>
+
                 <div className="formGrid">
-                  {expenseFields.map(renderField)}
+                  {expenseFields.map(
+                    renderField,
+                  )}
                 </div>
               </div>
             </details>
@@ -868,37 +1618,64 @@ export default function Home() {
               <summary className="optionalSummary">
                 <div>
                   <strong>
-                    {appCopy.sections.otherMoney.titleEn}
+                    {
+                      appCopy.sections
+                        .otherMoney.titleEn
+                    }
                   </strong>
 
                   <small>
-                    {appCopy.sections.otherMoney.titleNe}
+                    {
+                      appCopy.sections
+                        .otherMoney.titleNe
+                    }
                   </small>
                 </div>
 
                 <span className="optionalBadge">
-                  {appCopy.sections.optional}
+                  {
+                    appCopy.sections
+                      .optional
+                  }
                 </span>
               </summary>
 
               <div className="optionalBody">
+                <p className="optionalDescription">
+                  {
+                    appCopy.sections
+                      .otherMoney
+                      .description
+                  }
+                </p>
+
                 <div className="formGrid">
-                  {otherMoneyFields.map(renderField)}
+                  {otherMoneyFields.map(
+                    renderField,
+                  )}
                 </div>
               </div>
             </details>
           </div>
 
           {error && (
-            <p className="privacy" role="alert">
+            <p
+              className="privacy"
+              role="alert"
+            >
               ⚠️ {error}
             </p>
           )}
 
-          <button className="primaryButton" type="submit">
+          <button
+            className="primaryButton"
+            type="submit"
+          >
             {appCopy.actions.closeNe}
 
-            <span>{appCopy.actions.closeEn} →</span>
+            <span>
+              {appCopy.actions.closeEn} →
+            </span>
           </button>
         </form>
       ) : (
@@ -909,34 +1686,50 @@ export default function Home() {
 
               <div>
                 <strong>
-                  {appCopy.result.completeEn}
+                  {
+                    appCopy.result
+                      .completeEn
+                  }
                 </strong>
 
                 <small>
-                  {appCopy.result.completeNe}
+                  {
+                    appCopy.result
+                      .completeNe
+                  }
                 </small>
               </div>
             </div>
 
             <p className="resultHeroLabel">
-              {appCopy.result.salesReceived.labelEn}
+              {
+                appCopy.result
+                  .salesReceived.labelEn
+              }
             </p>
 
             <div className="resultAmount">
               <span>रु</span>
 
               <strong>
-                {formatMoney(result.salesReceived)}
+                {formatMoney(
+                  result.salesReceived,
+                )}
               </strong>
             </div>
 
             <p className="resultHeroNepali">
-              {appCopy.result.salesReceived.labelNe}
+              {
+                appCopy.result
+                  .salesReceived.labelNe
+              }
             </p>
 
             <p className="resultDate">
               {editingClosing
-                ? formatSavedDate(editingClosing.date)
+                ? formatSavedDate(
+                    editingClosing.date,
+                  )
                 : today}
             </p>
           </div>
@@ -944,11 +1737,17 @@ export default function Home() {
           <div className="resultSection">
             <div className="resultSectionHeading">
               <h2>
-                {appCopy.result.afterExpensesEn}
+                {
+                  appCopy.result
+                    .afterExpensesEn
+                }
               </h2>
 
               <p>
-                {appCopy.result.afterExpensesNe}
+                {
+                  appCopy.result
+                    .afterExpensesNe
+                }
               </p>
             </div>
 
@@ -956,47 +1755,71 @@ export default function Home() {
               <div className="resultRow">
                 <div>
                   <strong>
-                    {appCopy.result.salesReceived.labelEn}
-                  </strong>
-
-                  <small>
-                    {appCopy.result.salesReceived.labelNe}
-                  </small>
-                </div>
-
-                <span className="incomingAmount">
-                  रु {formatMoney(result.salesReceived)}
-                </span>
-              </div>
-
-              <div className="resultRow">
-                <div>
-                  <strong>
-                    {appCopy.result.totalExpenses.labelEn}
-                  </strong>
-
-                  <small>
-                    {appCopy.result.totalExpenses.labelNe}
-                  </small>
-                </div>
-
-                <span className="outgoingAmount">
-                  − रु {formatMoney(result.totalExpenses)}
-                </span>
-              </div>
-
-              <div className="resultRow">
-                <div>
-                  <strong>
                     {
-                      appCopy.result.remainingAfterExpenses
+                      appCopy.result
+                        .salesReceived
                         .labelEn
                     }
                   </strong>
 
                   <small>
                     {
-                      appCopy.result.remainingAfterExpenses
+                      appCopy.result
+                        .salesReceived
+                        .labelNe
+                    }
+                  </small>
+                </div>
+
+                <span className="incomingAmount">
+                  रु{" "}
+                  {formatMoney(
+                    result.salesReceived,
+                  )}
+                </span>
+              </div>
+
+              <div className="resultRow">
+                <div>
+                  <strong>
+                    {
+                      appCopy.result
+                        .totalExpenses
+                        .labelEn
+                    }
+                  </strong>
+
+                  <small>
+                    {
+                      appCopy.result
+                        .totalExpenses
+                        .labelNe
+                    }
+                  </small>
+                </div>
+
+                <span className="outgoingAmount">
+                  − रु{" "}
+                  {formatMoney(
+                    result.totalExpenses,
+                  )}
+                </span>
+              </div>
+
+              <div className="resultRow">
+                <div>
+                  <strong>
+                    {
+                      appCopy.result
+                        .remainingAfterExpenses
+                        .labelEn
+                    }
+                  </strong>
+
+                  <small>
+                    {
+                      appCopy.result
+                        .remainingAfterExpenses
                         .labelNe
                     }
                   </small>
@@ -1004,14 +1827,17 @@ export default function Home() {
 
                 <span
                   className={
-                    result.remainingAfterExpenses >= 0
+                    result
+                      .remainingAfterExpenses >=
+                    0
                       ? "incomingAmount"
                       : "outgoingAmount"
                   }
                 >
                   = रु{" "}
                   {formatMoney(
-                    result.remainingAfterExpenses,
+                    result
+                      .remainingAfterExpenses,
                   )}
                 </span>
               </div>
@@ -1021,11 +1847,113 @@ export default function Home() {
           <div className="resultSection">
             <div className="resultSectionHeading">
               <h2>
-                {appCopy.result.prepareTomorrowEn}
+                {
+                  appCopy.cashCounter
+                    .breakdownEn
+                }
               </h2>
 
               <p>
-                {appCopy.result.prepareTomorrowNe}
+                {
+                  appCopy.cashCounter
+                    .breakdownNe
+                }
+              </p>
+            </div>
+
+            <div className="resultList">
+              <div className="resultRow">
+                <div>
+                  <strong>
+                    {
+                      appCopy.result
+                        .closingCash
+                        .labelEn
+                    }
+                  </strong>
+
+                  <small>
+                    {
+                      appCopy.result
+                        .closingCash
+                        .labelNe
+                    }
+                  </small>
+                </div>
+
+                <span className="incomingAmount">
+                  रु{" "}
+                  {formatMoney(
+                    result.closingCash,
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="cashCountRecord">
+              <div className="cashCountRecordHeading">
+                <div>
+                  <strong>
+                    {cashEntryMode ===
+                    "denominations"
+                      ? appCopy.cashCounter
+                          .countedByDenominationEn
+                      : appCopy.cashCounter
+                          .enteredAsTotalEn}
+                  </strong>
+
+                  <small>
+                    {cashEntryMode ===
+                    "denominations"
+                      ? appCopy.cashCounter
+                          .countedByDenominationNe
+                      : appCopy.cashCounter
+                          .enteredAsTotalNe}
+                  </small>
+                </div>
+              </div>
+
+              {cashEntryMode ===
+                "denominations" &&
+                currentCashBreakdownRows.length >
+                  0 && (
+                  <div className="savedCashBreakdown">
+                    {currentCashBreakdownRows.map(
+                      (row) => (
+                        <div key={row.key}>
+                          <span>
+                            रु {row.label} ×{" "}
+                            {row.quantity}
+                          </span>
+
+                          <strong>
+                            रु{" "}
+                            {formatMoney(
+                              row.subtotal,
+                            )}
+                          </strong>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
+            </div>
+          </div>
+
+          <div className="resultSection">
+            <div className="resultSectionHeading">
+              <h2>
+                {
+                  appCopy.result
+                    .prepareTomorrowEn
+                }
+              </h2>
+
+              <p>
+                {
+                  appCopy.result
+                    .prepareTomorrowNe
+                }
                 {" · "}
                 {
                   appCopy.result
@@ -1037,14 +1965,16 @@ export default function Home() {
             <label className="field">
               <span>
                 {
-                  appCopy.result.cashKeptForTomorrow
+                  appCopy.result
+                    .cashKeptForTomorrow
                     .labelEn
                 }
               </span>
 
               <small>
                 {
-                  appCopy.result.cashKeptForTomorrow
+                  appCopy.result
+                    .cashKeptForTomorrow
                     .labelNe
                 }
               </small>
@@ -1072,14 +2002,16 @@ export default function Home() {
                 <div>
                   <strong>
                     {
-                      appCopy.result.ownerWithdrawal
+                      appCopy.result
+                        .ownerWithdrawal
                         .labelEn
                     }
                   </strong>
 
                   <small>
                     {
-                      appCopy.result.ownerWithdrawal
+                      appCopy.result
+                        .ownerWithdrawal
                         .labelNe
                     }
                   </small>
@@ -1092,13 +2024,19 @@ export default function Home() {
                       : "incomingAmount"
                   }
                 >
-                  रु {formatMoney(ownerWithdrawal)}
+                  रु{" "}
+                  {formatMoney(
+                    ownerWithdrawal,
+                  )}
                 </span>
               </div>
             </div>
 
             {handoffError && (
-              <p className="privacy" role="alert">
+              <p
+                className="privacy"
+                role="alert"
+              >
                 ⚠️ {handoffError}
               </p>
             )}
@@ -1114,8 +2052,10 @@ export default function Home() {
               {saved
                 ? appCopy.actions.savedNe
                 : editingClosing
-                  ? appCopy.actions.updateNe
-                  : appCopy.actions.saveNe}
+                  ? appCopy.actions
+                      .updateNe
+                  : appCopy.actions
+                      .saveNe}
 
               <span>
                 {saved
@@ -1126,30 +2066,46 @@ export default function Home() {
               </span>
             </button>
 
-            {saved && lastSavedClosing && (
-              <button
-                className="secondaryButton"
-                type="button"
-                onClick={() =>
-                  openPdfPrintDialog(lastSavedClosing)
-                }
-              >
-                <span>{appCopy.actions.pdfEn}</span>
+            {saved &&
+              lastSavedClosing && (
+                <button
+                  className="secondaryButton"
+                  type="button"
+                  onClick={() =>
+                    openPdfPrintDialog(
+                      lastSavedClosing,
+                    )
+                  }
+                >
+                  <span>
+                    {
+                      appCopy.actions
+                        .pdfEn
+                    }
+                  </span>
 
-                <strong>
-                  {appCopy.actions.pdfNe} ↓
-                </strong>
-              </button>
-            )}
+                  <strong>
+                    {
+                      appCopy.actions
+                        .pdfNe
+                    }{" "}
+                    ↓
+                  </strong>
+                </button>
+              )}
 
             <button
               className="secondaryButton"
               type="button"
               onClick={editCurrentAmounts}
             >
-              <span>← {appCopy.actions.editEn}</span>
+              <span>
+                ← {appCopy.actions.editEn}
+              </span>
 
-              <strong>{appCopy.actions.editNe}</strong>
+              <strong>
+                {appCopy.actions.editNe}
+              </strong>
             </button>
           </div>
         </section>
@@ -1158,7 +2114,9 @@ export default function Home() {
       <p className="privacy">
         🔒 {appCopy.privacy.ne}
 
-        <span>{appCopy.privacy.en}</span>
+        <span>
+          {appCopy.privacy.en}
+        </span>
       </p>
     </main>
   );

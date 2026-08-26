@@ -5,7 +5,10 @@ export const appCopy = {
     titleNe: "आजको हिसाब",
     titleEn: "Today's Closing",
     heading: "Closing details",
-    description: "आजको कारोबारका मुख्य रकमहरू भर्नुहोस्।",
+
+    description:
+      "आजको कारोबारका मुख्य रकमहरू भर्नुहोस्।",
+
     required: "2 main entries",
 
     autoOpeningEn:
@@ -20,10 +23,61 @@ export const appCopy = {
     history: "इतिहास / History",
   },
 
+  cashCounter: {
+    titleEn: "Cash in Drawer Now",
+    titleNe: "अहिले भएको कुल नगद",
+
+    methodEn:
+      "How would you like to enter the drawer cash?",
+
+    methodNe:
+      "दराजको नगद कसरी भर्नुहुन्छ?",
+
+    totalModeEn: "Enter Total",
+    totalModeNe: "कुल रकम लेख्नुहोस्",
+
+    countModeEn: "Count Cash",
+    countModeNe: "नगद गन्नुहोस्",
+
+    countHelpEn:
+      "Enter the quantity of each cash value. The total is calculated automatically.",
+
+    countHelpNe:
+      "हरेक नोट वा सिक्काको संख्या लेख्नुहोस्। कुल रकम आफैँ जोडिन्छ।",
+
+    denominationEn: "Cash Value",
+    denominationNe: "नोट वा सिक्काको मूल्य",
+
+    quantityEn: "Quantity",
+    quantityNe: "संख्या",
+
+    subtotalEn: "Subtotal",
+    subtotalNe: "जम्मा",
+
+    countedTotalEn: "Counted Drawer Total",
+    countedTotalNe: "गनेको कुल नगद",
+
+    clearEn: "Clear Count",
+    clearNe: "सबै खाली गर्नुहोस्",
+
+    breakdownEn: "Cash Count Breakdown",
+    breakdownNe: "नगद गन्ती विवरण",
+
+    enteredAsTotalEn: "Entered as one total",
+    enteredAsTotalNe: "कुल रकम सिधै लेखिएको",
+
+    countedByDenominationEn:
+      "Counted by cash value",
+
+    countedByDenominationNe:
+      "नोट र सिक्काबाट गनिएको",
+  },
+
   sections: {
     eCash: {
       titleEn: "E-Cash",
       titleNe: "डिजिटल भुक्तानी",
+
       description:
         "Enter sales received through QR, e-wallet, or online banking.",
     },
@@ -31,6 +85,7 @@ export const appCopy = {
     expenses: {
       titleEn: "Expenses",
       titleNe: "आजको खर्च",
+
       description:
         "Enter expenses only if the shop paid something today.",
     },
@@ -38,6 +93,7 @@ export const appCopy = {
     otherMoney: {
       titleEn: "Other Money In",
       titleNe: "बिक्री बाहेक आएको नगद",
+
       description:
         "Enter money added to the drawer that did not come from today's sales.",
     },
@@ -73,11 +129,14 @@ export const appCopy = {
     titleEn: "Closing History",
 
     heading: "Daily closings",
+
     description:
       "Expand a closing to see, edit, or save its complete record as PDF.",
 
     emptyEn: "No closings saved yet.",
-    emptyNe: "अहिलेसम्म कुनै हिसाब सुरक्षित गरिएको छैन।",
+
+    emptyNe:
+      "अहिलेसम्म कुनै हिसाब सुरक्षित गरिएको छैन।",
 
     viewDetails: "View details",
 
@@ -104,10 +163,14 @@ export const appCopy = {
     completeNe: "आजको हिसाब पूरा भयो",
 
     afterExpensesEn: "After recorded expenses",
-    afterExpensesNe: "रेकर्ड गरिएको खर्चपछिको हिसाब",
+
+    afterExpensesNe:
+      "रेकर्ड गरिएको खर्चपछिको हिसाब",
 
     prepareTomorrowEn: "Prepare for tomorrow",
-    prepareTomorrowNe: "भोलिको लागि नगद तयार गर्नुहोस्",
+
+    prepareTomorrowNe:
+      "भोलिको लागि नगद तयार गर्नुहोस्",
 
     prepareTomorrowDescription:
       "Choose how much drawer cash will remain in the shop.",
@@ -118,8 +181,11 @@ export const appCopy = {
     },
 
     remainingAfterExpenses: {
-      labelEn: "Remaining After Recorded Expenses",
-      labelNe: "रेकर्ड गरिएको खर्चपछिको बाँकी रकम",
+      labelEn:
+        "Remaining After Recorded Expenses",
+
+      labelNe:
+        "रेकर्ड गरिएको खर्चपछिको बाँकी रकम",
     },
 
     cashSales: {
@@ -221,14 +287,24 @@ export const mainClosingFields = [
 export const eCashFields = [
   {
     key: "qrWalletReceived",
-    labelEn: "QR / E-Wallet Sales Received",
-    labelNe: "QR वा ई-वलेटबाट आएको बिक्री रकम",
+
+    labelEn:
+      "QR / E-Wallet Sales Received",
+
+    labelNe:
+      "QR वा ई-वलेटबाट आएको बिक्री रकम",
+
     placeholder: "0",
   },
   {
     key: "onlineBankingReceived",
-    labelEn: "Online Banking Sales Received",
-    labelNe: "अनलाइन बैंकिङबाट आएको बिक्री रकम",
+
+    labelEn:
+      "Online Banking Sales Received",
+
+    labelNe:
+      "अनलाइन बैंकिङबाट आएको बिक्री रकम",
+
     placeholder: "0",
   },
 ] as const;
@@ -243,7 +319,10 @@ export const expenseFields = [
   {
     key: "otherExpenses",
     labelEn: "Other Expense",
-    labelNe: "डिजिटल, बैंक वा अन्य माध्यमबाट तिरेको खर्च",
+
+    labelNe:
+      "डिजिटल, बैंक वा अन्य माध्यमबाट तिरेको खर्च",
+
     placeholder: "0",
   },
 ] as const;
@@ -251,8 +330,13 @@ export const expenseFields = [
 export const otherMoneyFields = [
   {
     key: "otherMoneyIn",
-    labelEn: "Other Money Added to Drawer",
-    labelNe: "बिक्री बाहेक दराजमा आएको नगद",
+
+    labelEn:
+      "Other Money Added to Drawer",
+
+    labelNe:
+      "बिक्री बाहेक दराजमा आएको नगद",
+
     placeholder: "0",
   },
 ] as const;
@@ -267,4 +351,5 @@ export const closingFields = [
 export type ClosingField =
   (typeof closingFields)[number];
 
-export type ClosingFieldKey = ClosingField["key"];
+export type ClosingFieldKey =
+  ClosingField["key"];
