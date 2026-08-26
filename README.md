@@ -54,42 +54,35 @@ Merchants should download important closing records as PDF for safekeeping.
 
 ```text
 Cash Sales =
-Cash in Drawer Now
-- Opening Cash
-- Other Money In
-+ Cash Expenses
+Cash in Drawer Now - Opening Cash - Other Money In + Cash Expenses
 ```
 
 ### E-Cash sales
 
 ```text
 E-Cash Sales =
-QR/E-Wallet Received
-+ Online Banking Received
+QR/E-Wallet Received + Online Banking Received
 ```
 
 ### Total sales received
 
 ```text
 Total Sales Received =
-Cash Sales
-+ E-Cash Sales
+Cash Sales + E-Cash Sales
 ```
 
 ### Total expenses
 
 ```text
 Total Expenses =
-Cash Expenses
-+ Other Expenses
+Cash Expenses + Other Expenses
 ```
 
 ### Remaining after expenses
 
 ```text
 Remaining After Expenses =
-Total Sales Received
-- Total Expenses
+Total Sales Received - Total Expenses
 ```
 
 The amount remaining after expenses is not accounting profit.
