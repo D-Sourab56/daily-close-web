@@ -58,3 +58,15 @@ Cash in Drawer Now
 - Opening Cash
 - Other Money In
 + Cash Expenses
+E-Cash Sales =
+QR/E-Wallet Received
++ Online Banking Received
+Total Sales Received =
+Cash Sales
++ E-Cash Sales
+Total Expenses =
+Cash Expenses
++ Other Expenses
+Remaining After Expenses =
+Total Sales Received
+- Total Expenses
