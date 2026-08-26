@@ -1117,3 +1117,241 @@ h1 {
     flex-direction: column;
   }
 }
+/* Theme toggle */
+
+.themeToggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 20px rgba(36, 48, 45, 0.12);
+}
+
+.themeToggle:hover {
+  border-color: var(--green);
+}
+
+.themeToggle:focus-visible {
+  outline: 3px solid var(--green-soft);
+  outline-offset: 3px;
+}
+
+.themeIcon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.themeText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.themeText strong {
+  font-size: 11px;
+}
+
+.themeText small {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+/* Higher-contrast numerical inputs */
+
+.moneyInput {
+  border-color: #aaa397;
+  background: #ffffff;
+}
+
+.moneyInput input {
+  color: #16211e;
+  caret-color: #16211e;
+}
+
+.moneyInput input::placeholder {
+  color: #747d78;
+}
+
+.moneyInput:focus-within {
+  border-color: var(--green);
+  background: #ffffff;
+}
+
+.denominationItem input {
+  border-color: #aaa397;
+  background: #ffffff;
+  color: #16211e;
+  caret-color: #16211e;
+}
+
+.denominationItem input::placeholder {
+  color: #747d78;
+}
+
+/* Dark theme palette */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #0f1513;
+  --surface: #1a221f;
+  --surface-muted: #26312d;
+
+  --text: #f6f3eb;
+  --muted: #bec8c3;
+  --border: #52615a;
+
+  --green: #82b6aa;
+  --green-dark: #284b44;
+  --green-soft: #263d37;
+
+  --nepal-crimson: #dc92a0;
+  --nepal-crimson-soft: #3c292e;
+
+  --profit: #a9d6b4;
+  --profit-soft: #263c2f;
+
+  --loss: #f2a8b0;
+  --loss-soft: #432b30;
+
+  --brass: #e4c37d;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(54, 95, 88, 0.3) 0,
+      transparent 32rem
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(141, 63, 80, 0.2) 0,
+      transparent 28rem
+    ),
+    var(--background);
+}
+
+html[data-theme="dark"] .cashEntryCard,
+html[data-theme="dark"] .optionalSection,
+html[data-theme="dark"] .cashCountRecord {
+  background: #151c19;
+}
+
+html[data-theme="dark"] .tabs {
+  background: rgba(26, 34, 31, 0.8);
+}
+
+html[data-theme="dark"] .themeToggle {
+  background: #202a26;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .themeIcon {
+  color: #f6f3eb;
+}
+
+html[data-theme="dark"] .moneyInput,
+html[data-theme="dark"] .denominationItem input {
+  border-color: #718078;
+  background: #0b100e;
+}
+
+html[data-theme="dark"] .moneyInput input,
+html[data-theme="dark"] .denominationItem input {
+  color: #ffffff;
+  caret-color: #ffffff;
+}
+
+html[data-theme="dark"] .moneyInput input::placeholder,
+html[data-theme="dark"]
+  .denominationItem
+  input::placeholder {
+  color: #9faaa5;
+}
+
+html[data-theme="dark"]
+  .moneyInput:focus-within,
+html[data-theme="dark"]
+  .denominationItem
+  input:focus {
+  border-color: #9dd0c4;
+  background: #111916;
+  box-shadow: 0 0 0 3px rgba(130, 182, 170, 0.24);
+}
+
+html[data-theme="dark"]
+  .cashModeButton.active {
+  color: var(--text);
+}
+
+html[data-theme="dark"]
+  .denominationValue,
+html[data-theme="dark"]
+  .countedCashTotal span,
+html[data-theme="dark"]
+  .countedCashTotal strong,
+html[data-theme="dark"]
+  .savedCashBreakdown strong {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .countedCashTotal {
+  border-color: #526c63;
+}
+
+html[data-theme="dark"] .primaryButton {
+  background: #3f756b;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .primaryButton:hover {
+  background: #4c857a;
+}
+
+html[data-theme="dark"]
+  .secondaryButton:hover {
+  background: var(--green-soft);
+}
+
+html[data-theme="dark"]
+  .denominationItem {
+  background: #202925;
+}
+
+/* Small phone layout */
+
+@media (max-width: 600px) {
+  .themeToggle {
+    top: 12px;
+    right: 12px;
+    width: 42px;
+    height: 42px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .themeText {
+    display: none;
+  }
+
+  .app {
+    padding-top: 72px;
+  }
+}
